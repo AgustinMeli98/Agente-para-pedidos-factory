@@ -1,0 +1,246 @@
+{
+  "name": "Planillas de produccion",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 21
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -576,
+        -96
+      ],
+      "id": "370520ca-890e-40ca-bf92-392ef040ce9e",
+      "name": "Trigger 21 hs"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "64535d37-35a2-46ab-baac-4bc4779049db",
+              "name": "fecha",
+              "value": "={{ $json.query?.fecha || $now.plus({ days: 2 }).toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -320,
+        -16
+      ],
+      "id": "1c017c54-3ea6-4b51-8a76-fa296971e041",
+      "name": "Fecha objetivo"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "ID_DE_TU_GOOGLE_SHEET",
+          "mode": "list",
+          "cachedResultName": "Factory_Pedidos_n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1655137146,
+          "mode": "list",
+          "cachedResultName": "Pedidos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit#gid=1655137146"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -96,
+        -16
+      ],
+      "id": "40bc9266-68c8-4203-97f1-cf58793ac547",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JUPGgCS28U05sPzF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "tu-email@ejemplo.com",
+        "subject": "={{ $json.asunto }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        368,
+        -16
+      ],
+      "id": "af8f9000-f900-4741-a46b-bc77bb17340e",
+      "name": "Enviar planilla",
+      "webhookId": "e3f730dc-ae25-42da-9b16-f540a943f6ab",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TtMTKIbwExewc6IY",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "477fa5f9-19f0-4100-94ca-f41d0767a40a",
+              "name": "fecha",
+              "value": "={{ $('Fecha objetivo').first().json.fecha }}",
+              "type": "string"
+            },
+            {
+              "id": "174c6a32-c472-4d15-b381-5eb81392cc74",
+              "name": "planillas",
+              "value": "={{ $('Armar planillas').all().map(i => i.json.seccion + ': ' + i.json.productos + ' productos').join(' | ') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        592,
+        -16
+      ],
+      "id": "e544db28-3bee-41d6-a8a2-093b0e1078bb",
+      "name": "Resultado",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const fecha = $('Fecha objetivo').first().json.fecha;\nconst norm = v => {\n  if (typeof v === 'number') return DateTime.fromMillis(Math.round((v - 25569) * 86400000), { zone: 'utc' }).toFormat('yyyy-MM-dd');\n  const s = String(v || '').trim();\n  let d = DateTime.fromISO(s);\n  if (!d.isValid) d = DateTime.fromFormat(s, 'd/M/yyyy');\n  return d.isValid ? d.toFormat('yyyy-MM-dd') : s;\n};\nconst filas = $input.all().map(i => i.json)\n  .filter(r => r.producto && norm(r.fecha_entrega) === fecha && String(r.estado || '').toLowerCase() === 'aceptado');\nconst titulo = DateTime.fromISO(fecha).setLocale('es').toFormat('cccc dd/MM');\nconst th = 'style=\"border:1px solid #555;padding:6px 10px;background:#c9daf8\"';\nconst td = 'style=\"border:1px solid #555;padding:6px 10px\"';\nconst tc = 'style=\"border:1px solid #555;padding:6px 10px;text-align:center\"';\nconst tt = 'style=\"border:1px solid #555;padding:6px 10px;text-align:center;font-weight:bold;background:#d9d9d9\"';\n\nconst secciones = [['Panadería', ['Panadería', 'Sandwiches']], ['Pastelería', ['Pastelería']]];\nreturn secciones.map(([nombre, incluye]) => {\n  const fs = filas.filter(r => incluye.includes(r.seccion));\n  const clientes = [...new Set(fs.map(r => r.cliente))].sort();\n  const prods = {};\n  for (const r of fs) {\n    const p = prods[r.producto] ??= { producto: r.producto, porCliente: {}, total: 0, obs: new Set() };\n    const c = Number(r.cantidad) || 0;\n    p.porCliente[r.cliente] = (p.porCliente[r.cliente] || 0) + c;\n    p.total += c;\n    if (r.observacion) p.obs.add(r.observacion);\n  }\n  const lista = Object.values(prods).sort((a, b) => a.producto.localeCompare(b.producto, 'es'));\n  const html = !lista.length ? `<p>No hay pedidos de ${nombre} para el ${titulo}.</p>` :\n    `<table style=\"border-collapse:collapse;font-family:Arial;font-size:14px\">\n     <tr><th colspan=\"${clientes.length + 3}\" ${th}>${nombre.toUpperCase()}</th></tr>\n     <tr><td ${th}>FECHA</td><th colspan=\"${clientes.length + 1}\" ${th}>${titulo}</th><td ${th}></td></tr>\n     <tr><td ${th}></td>${clientes.map(c => `<td ${th}>${c}</td>`).join('')}<th ${th}>Total</th><th ${th}>Observación</th></tr>\n     ${lista.map(p => `<tr><td ${td}>${p.producto}</td>${clientes.map(c => `<td ${tc}>${p.porCliente[c] ?? ''}</td>`).join('')}<td ${tt}>${p.total}</td><td ${tc}>${[...p.obs].join(', ') || '-'}</td></tr>`).join('')}\n     </table>`;\n  return { json: { seccion: nombre, fecha, productos: lista.length, asunto: `Planilla de ${nombre} – ${titulo}`, html } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -16
+      ],
+      "id": "fd8864eb-d032-4e2f-9f87-bdc041c4ab70",
+      "name": "Armar planillas"
+    },
+    {
+      "parameters": {
+        "path": "planilla",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        96
+      ],
+      "id": "5ca8f976-58fa-44f3-89ac-dae670dd8a36",
+      "name": "Pedido de planilla",
+      "webhookId": "ea8dc568-2185-4d90-a4b4-3db59a59d398"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger 21 hs": {
+      "main": [
+        [
+          {
+            "node": "Fecha objetivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fecha objetivo": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Armar planillas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar planilla": {
+      "main": [
+        [
+          {
+            "node": "Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar planillas": {
+      "main": [
+        [
+          {
+            "node": "Enviar planilla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedido de planilla": {
+      "main": [
+        [
+          {
+            "node": "Fecha objetivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9dBZHxjAabQH5pNk",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "c274faed-d48b-47e9-aa10-2e7a15f9cc71",
+  "meta": {},
+  "nodeGroups": [],
+  "id": "jABelAgNboVNdIFz",
+  "tags": []
+}

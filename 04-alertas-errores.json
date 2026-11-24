@@ -1,0 +1,63 @@
+{
+  "name": "Error control",
+  "nodes": [
+    {
+      "parameters": {
+        "sendTo": "tu-email@ejemplo.com",
+        "subject": "=Error en n8n: {{ $json.workflow.name }}",
+        "message": "=<p><b>Workflow:</b> {{ $json.workflow.name }}</p> <p><b>Nodo que falló:</b> {{ $json.execution.lastNodeExecuted }}</p> <p><b>Error:</b> {{ $json.execution.error.message }}</p> <p><b>Hora:</b> {{ $now.toFormat('dd/MM/yyyy HH:mm') }}</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        112,
+        16
+      ],
+      "id": "e339743b-41d9-4f12-b772-2d1a37a06cd7",
+      "name": "Aviso de error",
+      "webhookId": "b757b26a-d884-4d8b-a2ae-6f88588355fa",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TtMTKIbwExewc6IY",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        16
+      ],
+      "id": "e5c57d8b-e29e-4843-86ae-9e5aeb25c6a8",
+      "name": "Error de flujo"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error de flujo": {
+      "main": [
+        [
+          {
+            "node": "Aviso de error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2d6218b0-9faa-4b31-b690-d62c17f81e90",
+  "meta": {},
+  "nodeGroups": [],
+  "id": "9dBZHxjAabQH5pNk",
+  "tags": []
+}

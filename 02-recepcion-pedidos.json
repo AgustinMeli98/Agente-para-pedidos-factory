@@ -1,0 +1,1530 @@
+{
+  "name": "Recepción de pedidos",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pedido-factory",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        288,
+        1040
+      ],
+      "id": "6fd11dd4-ecd8-49a0-a38e-95fec9edb347",
+      "name": "Pedido Whatsapp",
+      "webhookId": "76b8e747-5817-41ce-a4e0-f11946ddc4b0"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1687b1aa-c67c-4751-876e-c2893a4621c1",
+              "name": "cliente",
+              "value": "={{ $json.body.cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "a06bdc80-83b5-47e1-8cd4-17a177037d35",
+              "name": "canal",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "fe47f0d5-0efb-4e1d-8824-b9f329cbd08d",
+              "name": "texto",
+              "value": "={{ $json.body.texto }}",
+              "type": "string"
+            },
+            {
+              "id": "1b86d45f-c7b3-427a-9941-0ebdf1ec4261",
+              "name": "fecha_indicada",
+              "value": "={{ $json.body.fecha_entrega || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        512,
+        1040
+      ],
+      "id": "07f725be-cce9-4f39-a9f1-8b7f3594a451",
+      "name": "Normalizar pedido"
+    },
+    {
+      "parameters": {
+        "formTitle": "Pedido Excel",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Cliente",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Café"
+                  },
+                  {
+                    "option": "La Pana"
+                  },
+                  {
+                    "option": "Mayorista A"
+                  },
+                  {
+                    "option": "Mayorista B"
+                  },
+                  {
+                    "option": "Particular"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "archivo",
+              "fieldType": "file",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "fecha_entrega",
+              "fieldType": "date"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        272,
+        1280
+      ],
+      "id": "b0ad0163-52e8-475d-b7af-4c7350afdf40",
+      "name": "Pedido Excel",
+      "webhookId": "b41779e3-dd38-4ab4-bbe0-3113b8fb526c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const form = $('Pedido Excel').first().json;\n// Busca un campo del formulario sin importar mayúsculas, espacios ni guiones\nconst campo = (...nombres) => {\n  const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[\\s_-]|de/g, '');\n  const k = Object.keys(form).find(x => nombres.map(norm).includes(norm(x)));\n  return k ? form[k] : '';\n};\nconst lineas = $input.all()\n  .map(i => Object.values(i.json).filter(v => v !== null && v !== '').join(' '))\n  .filter(l => l.trim() !== '');\nreturn [{ json: {\n  cliente: campo('cliente'),\n  canal: 'excel',\n  texto: lineas.join('\\n'),\n  fecha_indicada: campo('fecha_entrega', 'fecha de entrega', 'fecha')\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        1280
+      ],
+      "id": "9f2479b2-2665-4d0d-831a-4de3cf60957b",
+      "name": "Excel a texto"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0d002532-775f-4dbd-9130-27867e05423b",
+              "name": "id_pedido",
+              "value": "={{ 'P' + $now.toFormat('yyMMddHHmmss') }}",
+              "type": "string"
+            },
+            {
+              "id": "54384d63-0b01-485c-8f9d-bb414d8f9f74",
+              "name": "fecha_recepcion",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            },
+            {
+              "id": "f81ac148-3fe4-4e66-a05e-88bc74e1efb6",
+              "name": "fecha_entrega_default",
+              "value": "={{ $now.plus({ days: $json.cliente === 'Particular' ? 1 : 2 }).toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        928,
+        1152
+      ],
+      "id": "2eca8232-df8c-4fc3-8c71-5c331793f162",
+      "name": "Preparar pedido"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "archivo",
+        "options": {
+          "headerRow": false
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        1280
+      ],
+      "id": "a2ccaa47-9cd5-4d87-bdcc-58147c5410b8",
+      "name": "Leer excel"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Cliente: {{ $json.cliente }}\nCanal: {{ $json.canal }}\nFecha de recepción: {{ $json.fecha_recepcion }}\nFecha de entrega por defecto: {{ $json.fecha_entrega_default }}\nFecha de entrega indicada por el cliente: {{ $json.fecha_indicada || 'no indicada' }}\nPedido:\n{{ $json.texto }}",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "## ROL\nSos el asistente de recepción de pedidos de la Factory, el centro de producción de una panadería y pastelería de Mendoza. Recibís pedidos de clientes (texto de WhatsApp o filas de un Excel) y los convertís en un pedido estructurado con productos del catálogo oficial, para armar las planillas de producción.\n\n## HERRAMIENTAS\n- buscar_catalogo: busca productos en el catálogo oficial (código, nombre, sección, unidad y otras variantes de tamaño). Usala UNA VEZ POR CADA producto del pedido, con el nombre corregido (por ejemplo \"ciabttaA\" → \"ciabatta\", \"baguet\" → \"baguette\").\n- buscar_reglas: busca en las reglas de pedidos (tamaños por defecto por cliente, equivalencias de nombres, anticipación). Usala cuando un producto tenga varios tamaños y el pedido no lo indique, o cuando no sepas a qué producto se refiere un nombre.\n- historial_cliente: devuelve qué productos y tamaños pidió antes este cliente. Usala SOLO si a un producto con varios tamaños le falta el tamaño y el cliente no es Café ni La Pana.\n\n## TAREA\n1. Ignorá las líneas que no son productos (saludos, títulos, totales).\n2. Para cada producto, buscalo con buscar_catalogo y elegí el resultado que corresponde. Copiá el código (solo dígitos, o vacío si el producto no tiene) y el nombre EXACTOS.\n3.Tamaños: SOLO importan en los productos cuyo resultado tiene \"Otras variantes\" distintas de \"ninguna\" (tortas y tartas). Panes, facturas y sándwiches tienen un solo tamaño: no preguntes. Si falta el tamaño:\n   - Café → el tamaño de 10 cm; si ese producto no tiene 10 cm, el de 18 cm. Ejemplos: key lime → \"Key lime 10 cm\"; vasca → \"Vasca de 18 cm\"; havanet → \"Havanet 18 cm\".\n   - La Pana → el tamaño de 22 cm; si no tiene 22 cm, el más grande. Ejemplos: key lime → \"Key lime 24 cm\"; vasca → \"Vasca 24 cm\"; tiramisú → \"Tiramisu 22 cm\".\n   - Otros clientes → usá historial_cliente; si no se puede resolver, preguntá.\n   Nunca uses el tamaño por defecto de un cliente para otro.\n4. Fecha de entrega: la indicada por el cliente o, si no indica, la fecha por defecto.\n5. Tomá UNA decisión para todo el pedido:\n   - ACEPTADO: todos los productos identificados sin dudas.\n   - ACLARAR: SOLO cuando el producto existe en el catálogo pero falta un dato que el cliente puede responder (tamaño, tipo o unidad). Escribí UNA pregunta concreta.\n   - DERIVAR: si algún producto NO aparece en los resultados de buscar_catalogo (aunque haya algo parecido), si el pedido menciona alergias, \"sin gluten\" o \"sin TACC\" en un producto que no lo dice en su nombre, una cantidad supera el triple de lo habitual, no se cumple la anticipación, es un reclamo/cancelación/modificación, pide precios, o el mensaje no es un pedido.\n\n## REGLAS\n- Usá solo productos que devuelva buscar_catalogo. Nunca inventes productos ni códigos. Algunos productos del catálogo no tienen código (\"Código: \" vacío): siguen siendo válidos; en ese caso dejá codigo vacío y copiá el nombre exacto del producto.\n- Cantidades en la unidad del catálogo; no conviertas unidades.\n- Indicaciones como \"rebanado\" o \"en paquetes\" van en observacion.\n- Si usaste el tamaño por defecto del cliente, observacion = \"tamaño por defecto del cliente\"; si usaste el historial, \"tamaño según historial\". En los demás casos, observacion vacía.\n- Ante la duda entre ACEPTADO y ACLARAR, elegí ACLARAR. Ante un producto que no existe, siempre DERIVAR (nunca ACLARAR).\n\n## LÍMITES (qué NO hacer)\n- NO confirmes precios, descuentos ni horarios de entrega.\n- NO modifiques ni canceles pedidos anteriores: eso se DERIVA.\n- NO aceptes productos fuera del catálogo aunque se parezcan.\n- NO respondas temas ajenos a pedidos.\n\n## FORMATO DE SALIDA\nRespondé ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después y sin bloques de código. Estructura exacta:\n{\"decision\":\"ACEPTADO|ACLARAR|DERIVAR\",\"fecha_entrega\":\"AAAA-MM-DD\",\"items\":[{\"texto_original\":\"\",\"codigo\":\"\",\"producto\":\"\",\"seccion\":\"\",\"cantidad\":0,\"unidad\":\"\",\"observacion\":\"\"}],\"pregunta_cliente\":\"\",\"motivo\":\"\",\"mensaje_cliente\":\"\"}\nEl campo mensaje_cliente es breve, cordial, en español rioplatense y sin emojis:\n- ACEPTADO: confirmación con el resumen de productos y la fecha de entrega.\n- ACLARAR: la pregunta concreta.\n- DERIVAR: exactamente \"Recibimos tu mensaje, en breve te responde alguien del equipo.\"\nTu respuesta final debe ser SIEMPRE este JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1440,
+        1072
+      ],
+      "id": "23b0ae20-6cce-4d96-819a-072e71515bc8",
+      "name": "Agente de pedidos",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1328,
+        1264
+      ],
+      "id": "33249246-87bf-4016-8aea-19d76d7fada8",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "4psm5Job4wW582WN",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "qwen2.5:7b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        1296
+      ],
+      "id": "d9730de7-db52-4f0d-be53-e87215626247",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "wvpPtoTsnZbGenVF",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Preparar pedido').item.json.cliente + '-' + $('Preparar pedido').item.json.fecha_recepcion }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        1552,
+        1280
+      ],
+      "id": "ea713333-427c-4448-ae04-1d8b5e9d47b5",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        1872,
+        1424
+      ],
+      "id": "e09b514d-8316-46cc-82b8-b21b6ccfe34d",
+      "name": "Embeddings Ollama2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "wvpPtoTsnZbGenVF",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Busca en las reglas de pedidos: tamaños por defecto por cliente, equivalencias de nombres y anticipación.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "topK": 3,
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "tipo",
+                "value": "reglas"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        1568,
+        1392
+      ],
+      "id": "0771f4f0-b5a6-4768-b0c1-149655522f60",
+      "name": "Buscar reglas",
+      "credentials": {
+        "supabaseApi": {
+          "id": "txVK811nSOcO2lr4",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        1504
+      ],
+      "id": "d10719d4-a5a4-4795-a4f1-1c03a5811168",
+      "name": "Embeddings Ollama3",
+      "credentials": {
+        "ollamaApi": {
+          "id": "wvpPtoTsnZbGenVF",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "ID_DE_TU_GOOGLE_SHEET",
+          "mode": "list",
+          "cachedResultName": "Factory_Pedidos_n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1287868159,
+          "mode": "list",
+          "cachedResultName": "Historial",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit#gid=1287868159"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "cliente",
+              "lookupValue": "={{ $('Preparar pedido').item.json.cliente }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1712,
+        1280
+      ],
+      "id": "ae0fd893-0b26-4b01-a716-2e2080d650bd",
+      "name": "Historial cliente",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JUPGgCS28U05sPzF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = String($json.output ?? '');\nconst txt = raw.replace(/```json|```/g, '').replace(/[\\r\\n]+/g, '').trim();\nconst ini = txt.indexOf('{'), fin = txt.lastIndexOf('}');\nlet r = null, error = '';\ntry { r = raw ? JSON.parse(txt.slice(ini, fin + 1)) : null; } catch (e) { error = 'La IA no devolvió un JSON válido'; }\nconst ok = r && ['ACEPTADO', 'ACLARAR', 'DERIVAR'].includes(r.decision) && Array.isArray(r.items);\nif (!ok) {\n  return { json: {\n    decision: 'REVISAR',\n    motivo: error || (raw ? 'Respuesta con estructura incorrecta' : 'La IA devolvió una respuesta vacía'),\n    respuesta_cruda: raw.slice(0, 1000), items: [],\n    mensaje_cliente: 'Recibimos tu mensaje, en breve te responde alguien del equipo.'\n  }};\n}\nreturn { json: { ...r, parse_ok: true } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        864
+      ],
+      "id": "06834818-7366-4153-8f1e-a2b4f94c5106",
+      "name": "Parsear respuesta"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "ID_DE_TU_GOOGLE_SHEET",
+          "mode": "list",
+          "cachedResultName": "Factory_Pedidos_n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2117129515,
+          "mode": "list",
+          "cachedResultName": "Catalogo",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit#gid=2117129515"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2032,
+        848
+      ],
+      "id": "0c9bf36d-6770-46d5-ae7e-9ac727c6819b",
+      "name": "Validación",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JUPGgCS28U05sPzF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $('Parsear respuesta').first().json;\nconst p = $('Preparar pedido').first().json;\nconst cat = $input.all().map(i => i.json);\nconst porCodigo = new Map(cat.filter(c => String(c.codigo || '').trim()).map(c => [String(c.codigo).trim(), c]));\nconst porNombre = new Map(cat.map(c => [String(c.producto).trim().toLowerCase(), c]));\nconst errores = [], correcciones = [];\n\nif (r.decision === 'REVISAR') return [{ json: { ...p, ...r, errores_validacion: [r.motivo] } }];\n\n// Regla fija de tamaño por defecto: Café = 10 cm (si no, el más chico); La Pana = 22 cm (si no, el más grande)\nconst cm = x => { const m = String(x.producto).match(/(\\d+)\\s*cm/i); return m ? Number(m[1]) : null; };\nfunction tamanoDefecto(c) {\n  if (!['Café', 'La Pana'].includes(p.cliente)) return null;\n  const enteras = cat.filter(x => x.familia === c.familia && cm(x) !== null);\n  if (enteras.length < 2) return null;\n  if (p.cliente === 'Café') return enteras.find(x => cm(x) === 10) || [...enteras].sort((a, b) => cm(a) - cm(b))[0];\n  return enteras.find(x => cm(x) === 22) || [...enteras].sort((a, b) => cm(b) - cm(a))[0];\n}\n\nconst items = (r.items || []).map(it => {\n  const cod = String(it.codigo || '').trim();\n  let c = (cod && porCodigo.get(cod)) || porNombre.get(String(it.producto || '').trim().toLowerCase());\n  if (!c) { errores.push(`\"${it.texto_original}\": no identificado en el catálogo`); return { ...it, valido: false }; }\n  if (/por defecto/i.test(it.observacion || '')) {\n    const d = tamanoDefecto(c);\n    if (d && d.producto !== c.producto) { correcciones.push(`${c.producto} → ${d.producto}`); c = d; }\n  }\n  const cant = Number(it.cantidad);\n  if (!(cant > 0)) errores.push(`\"${it.texto_original}\": cantidad inválida`);\n  return { ...it, codigo: String(c.codigo || ''), producto: c.producto, seccion: c.seccion, unidad: c.unidad, cantidad: cant, valido: true };\n});\n\nconst minDias = p.cliente === 'Particular' ? 1 : 2;\nconst fecha = r.fecha_entrega || p.fecha_entrega_default;\nconst dias = DateTime.fromISO(fecha).diff(DateTime.fromISO(p.fecha_recepcion), 'days').days;\nif (r.decision === 'ACEPTADO') {\n  if (!items.length) errores.push('Pedido aceptado sin productos');\n  if (isNaN(dias)) errores.push('Fecha de entrega inválida');\n  else if (dias < minDias) errores.push(`No cumple la anticipación mínima de ${minDias} día(s)`);\n}\n\nconst decision = (r.decision === 'ACEPTADO' && errores.length) ? 'REVISAR' : r.decision;\nreturn [{ json: {\n  ...p, decision,\n  motivo: decision === 'REVISAR' ? errores.join('; ') : (r.motivo || ''),\n  fecha_entrega: fecha, items,\n  pregunta_cliente: r.pregunta_cliente || '',\n  mensaje_cliente: decision === 'REVISAR'\n    ? 'Recibimos tu mensaje, en breve te responde alguien del equipo.'\n    : decision === 'ACEPTADO'\n      ? `¡Gracias! Registramos tu pedido para el ${DateTime.fromISO(fecha).setLocale('es').toFormat('cccc dd/MM')}: ${items.map(i => `${i.cantidad} ${i.producto}`).join(', ')}.`\n      : r.mensaje_cliente,\n  errores_validacion: errores,\n  correcciones_validador: correcciones\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2256,
+        1072
+      ],
+      "id": "be63775d-5a10-4ddf-8544-6ac204566f57",
+      "name": "Validar pedido"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Busca un producto en el catálogo oficial. Recibe el nombre del producto.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "tipo",
+                "value": "catalogo"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        1888,
+        1296
+      ],
+      "id": "7ffe4466-d1f1-4d9a-a249-c8d5a98b53a5",
+      "name": "Buscar catálogo",
+      "credentials": {
+        "supabaseApi": {
+          "id": "txVK811nSOcO2lr4",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d105ecb9-b1ff-4b8f-9a94-8ae8486ae44c",
+              "leftValue": "={{ ['Café','La Pana','Mayorista A','Mayorista B','Particular'].includes($json.cliente) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "d6d815fc-70cd-4d18-863f-f2448cf3d985",
+              "leftValue": "={{ $json.texto }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1136,
+        1152
+      ],
+      "id": "7bdf66ed-b0fe-4ccf-b2b9-8925408e5d72",
+      "name": "Pedido completo?"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "ACEPTADO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8546504f-df75-42e3-832b-17427ec7282a"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "112955e8-db31-4aa3-b68e-2c59c5700369",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "ACLARAR",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2480,
+        1072
+      ],
+      "id": "017bd21e-5bd9-4d69-920b-661c8486d53b",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $input.first().json;\nreturn p.items.map(it => ({ json: {\n  id_pedido: p.id_pedido, fecha_recepcion: p.fecha_recepcion, fecha_entrega: p.fecha_entrega,\n  cliente: p.cliente, canal: p.canal, codigo: it.codigo, producto: it.producto,\n  seccion: it.seccion, cantidad: it.cantidad, unidad: it.unidad,\n  observacion: it.observacion || '', estado: 'aceptado'\n}}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        912
+      ],
+      "id": "c84d4839-a397-401a-8d48-c0860e8b1fb0",
+      "name": "Filas de pedido"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "ID_DE_TU_GOOGLE_SHEET",
+          "mode": "list",
+          "cachedResultName": "Factory_Pedidos_n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1655137146,
+          "mode": "list",
+          "cachedResultName": "Pedidos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit#gid=1655137146"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_pedido",
+              "displayName": "id_pedido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha_recepcion",
+              "displayName": "fecha_recepcion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha_entrega",
+              "displayName": "fecha_entrega",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cliente",
+              "displayName": "cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "codigo",
+              "displayName": "codigo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "producto",
+              "displayName": "producto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "seccion",
+              "displayName": "seccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cantidad",
+              "displayName": "cantidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "unidad",
+              "displayName": "unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "observacion",
+              "displayName": "observacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2880,
+        928
+      ],
+      "id": "f4b56dcd-d594-4037-835f-8ac327ac004f",
+      "name": "Guardar pedidos",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JUPGgCS28U05sPzF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "ID_DE_TU_GOOGLE_SHEET",
+          "mode": "list",
+          "cachedResultName": "Factory_Pedidos_n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 631944144,
+          "mode": "list",
+          "cachedResultName": "Revision",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit#gid=631944144"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_pedido": "={{ $json.id_pedido }}",
+            "fecha_recepcion": "={{ $json.fecha_recepcion }}",
+            "cliente": "={{ $json.cliente }}",
+            "canal": "={{ $json.canal }}",
+            "mensaje_original": "={{ $json.texto }}",
+            "decision": "={{ $json.decision }}",
+            "motivo": "={{ $json.motivo }}",
+            "pregunta_cliente": "={{ $json.pregunta_cliente }}",
+            "estado": "esperando respuesta del cliente"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_pedido",
+              "displayName": "id_pedido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha_recepcion",
+              "displayName": "fecha_recepcion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cliente",
+              "displayName": "cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mensaje_original",
+              "displayName": "mensaje_original",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decision",
+              "displayName": "decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pregunta_cliente",
+              "displayName": "pregunta_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2704,
+        1072
+      ],
+      "id": "b11a9b6e-f769-4d15-831c-444e95b90d77",
+      "name": "Guardar pregunta",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JUPGgCS28U05sPzF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "ID_DE_TU_GOOGLE_SHEET",
+          "mode": "list",
+          "cachedResultName": "Factory_Pedidos_n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 631944144,
+          "mode": "list",
+          "cachedResultName": "Revision",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit#gid=631944144"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "estado": "para revisar",
+            "id_pedido": "={{ $json.id_pedido }}",
+            "fecha_recepcion": "={{ $json.fecha_recepcion }}",
+            "cliente": "={{ $json.cliente }}",
+            "canal": "={{ $json.canal }}",
+            "mensaje_original": "={{ $json.texto }}",
+            "decision": "={{ $json.decision }}",
+            "motivo": "={{ $json.motivo }}",
+            "pregunta_cliente": "={{ $json.pregunta_cliente }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_pedido",
+              "displayName": "id_pedido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha_recepcion",
+              "displayName": "fecha_recepcion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cliente",
+              "displayName": "cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mensaje_original",
+              "displayName": "mensaje_original",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decision",
+              "displayName": "decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pregunta_cliente",
+              "displayName": "pregunta_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2704,
+        1232
+      ],
+      "id": "b6dab646-221b-4012-a8e4-f79643e6e3fb",
+      "name": "Guardar derivado",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JUPGgCS28U05sPzF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "tu-email@ejemplo.com",
+        "subject": "=Pedido para revisar: {{ $('Validar pedido').first().json.cliente }} ({{ $('Validar pedido').first().json.decision }})",
+        "message": "=<p><b>Cliente:</b> {{ $('Validar pedido').first().json.cliente }} · <b>Canal:</b> {{ $('Validar pedido').first().json.canal }} · <b>Pedido:</b> {{ $('Validar pedido').first().json.id_pedido }}</p>\n<p><b>Motivo:</b> {{ $('Validar pedido').first().json.motivo }}</p>\n<p><b>Mensaje original:</b><br>{{ ($('Validar pedido').first().json.texto || '').replace(/\\n/g, '<br>') }}</p>\n<p><b>Productos identificados:</b> {{ ($('Validar pedido').first().json.items || []).filter(i => i.valido).map(i => i.cantidad + ' ' + i.producto).join(', ') || 'ninguno' }}</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2928,
+        1232
+      ],
+      "id": "61c0d4fe-43dd-41bb-bba4-9c855237ff11",
+      "name": "Aviso por mail",
+      "webhookId": "63819db8-b49f-4eb2-befb-81b868656930",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TtMTKIbwExewc6IY",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "ID_DE_TU_GOOGLE_SHEET",
+          "mode": "list",
+          "cachedResultName": "Factory_Pedidos_n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 631944144,
+          "mode": "list",
+          "cachedResultName": "Revision",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit#gid=631944144"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "motivo": "Pedido sin cliente válido o sin texto",
+            "estado": "Para revisar",
+            "id_pedido": "={{ $json.id_pedido }}",
+            "fecha_recepcion": "={{ $json.fecha_recepcion }}",
+            "cliente": "={{ $json.cliente }}",
+            "canal": "={{ $json.canal }}",
+            "mensaje_original": "={{ $json.texto }}",
+            "decision": "={{ $json.decision }}",
+            "pregunta_cliente": "={{ $json.pregunta_cliente }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_pedido",
+              "displayName": "id_pedido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha_recepcion",
+              "displayName": "fecha_recepcion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cliente",
+              "displayName": "cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mensaje_original",
+              "displayName": "mensaje_original",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "decision",
+              "displayName": "decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pregunta_cliente",
+              "displayName": "pregunta_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1056,
+        1648
+      ],
+      "id": "9f1b6a43-eb9a-4139-b0d0-4d3a0dd3b22c",
+      "name": "Guardar pedido incompleto",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JUPGgCS28U05sPzF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "53c98f59-dc2e-4b85-857a-378013201a40",
+              "name": "id_pedido",
+              "value": "={{ $('Preparar pedido').first().json.id_pedido }}",
+              "type": "string"
+            },
+            {
+              "id": "e12eb791-5049-4699-904d-a4bebde6c11f",
+              "name": "decision",
+              "value": "={{ $('Validar pedido').isExecuted ? $('Validar pedido').first().json.decision : 'INCOMPLETO' }}",
+              "type": "string"
+            },
+            {
+              "id": "4d89f3b0-7a61-4f3d-9024-91bd3cd79ace",
+              "name": "mensaje",
+              "value": "={{ $('Validar pedido').isExecuted ? $('Validar pedido').first().json.mensaje_cliente : 'Recibimos tu mensaje, en breve te responde alguien del equipo.' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        3264,
+        1264
+      ],
+      "id": "8a0173a0-777b-4401-9988-72365b9b1cb2",
+      "name": "Respuesta al cliente",
+      "executeOnce": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Pedido Whatsapp": {
+      "main": [
+        [
+          {
+            "node": "Normalizar pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedido Excel": {
+      "main": [
+        [
+          {
+            "node": "Leer excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Excel a texto": {
+      "main": [
+        [
+          {
+            "node": "Preparar pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar pedido": {
+      "main": [
+        [
+          {
+            "node": "Preparar pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar pedido": {
+      "main": [
+        [
+          {
+            "node": "Pedido completo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer excel": {
+      "main": [
+        [
+          {
+            "node": "Excel a texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente de pedidos",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente de pedidos",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente de pedidos",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Buscar catálogo",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar reglas": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de pedidos",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama3": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Buscar reglas",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Historial cliente": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de pedidos",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente de pedidos": {
+      "main": [
+        [
+          {
+            "node": "Parsear respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear respuesta": {
+      "main": [
+        [
+          {
+            "node": "Validación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validación": {
+      "main": [
+        [
+          {
+            "node": "Validar pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar pedido": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar catálogo": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de pedidos",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedido completo?": {
+      "main": [
+        [
+          {
+            "node": "Agente de pedidos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Guardar pedido incompleto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Filas de pedido",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Guardar pregunta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Guardar derivado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filas de pedido": {
+      "main": [
+        [
+          {
+            "node": "Guardar pedidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar derivado": {
+      "main": [
+        [
+          {
+            "node": "Aviso por mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar pedido incompleto": {
+      "main": [
+        [
+          {
+            "node": "Respuesta al cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aviso por mail": {
+      "main": [
+        [
+          {
+            "node": "Respuesta al cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar pregunta": {
+      "main": [
+        [
+          {
+            "node": "Respuesta al cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar pedidos": {
+      "main": [
+        [
+          {
+            "node": "Respuesta al cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9dBZHxjAabQH5pNk",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "e49f918b-08ec-4944-87bc-2d1024611d76",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "dgIHQI0yBATfjwoX",
+  "tags": []
+}

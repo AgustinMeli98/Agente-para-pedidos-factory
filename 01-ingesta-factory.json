@@ -1,0 +1,367 @@
+{
+  "name": "Ingesta de datos",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        -128
+      ],
+      "id": "a4a9d161-6a66-4116-a79f-7c2fee64a902",
+      "name": "Ingesta de datos"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "ID_DE_TU_GOOGLE_SHEET",
+          "mode": "list",
+          "cachedResultName": "Factory_Pedidos_n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2117129515,
+          "mode": "list",
+          "cachedResultName": "Catalogo",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DE_TU_GOOGLE_SHEET/edit#gid=2117129515"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -176,
+        -128
+      ],
+      "id": "a48228f0-1220-4cff-acbd-11d5ce2f63e1",
+      "name": "Leer catalogo",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JUPGgCS28U05sPzF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2de860e1-e34a-4d40-8be7-3a8ee43102a2",
+              "name": "texto",
+              "value": "=Producto del catálogo: {{ $json.producto }} | Código: {{ $json.codigo }} | Sección: {{ $json.seccion }} | Unidad: {{ $json.unidad }} | Otras variantes del mismo producto: {{ $json.otras_variantes || 'ninguna' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        48,
+        -128
+      ],
+      "id": "daa698c1-e4d6-40ae-bf8e-2aba3f5c8b93",
+      "name": "Armar Texto"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        272,
+        -128
+      ],
+      "id": "ebe57547-e578-418f-9b0f-3cd61884a582",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "txVK811nSOcO2lr4",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        224,
+        80
+      ],
+      "id": "08d950c9-258d-4547-94ed-9be72a913c97",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": {
+          "id": "wvpPtoTsnZbGenVF",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.texto }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "tipo",
+                "value": "catalogo"
+              },
+              {
+                "name": "codigo",
+                "value": "={{ $('Armar Texto').item.json.codigo }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        96
+      ],
+      "id": "d926b640-ded0-40c9-8a58-35c965da668e",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "formTitle": "Cargar reglas",
+        "formDescription": "Subí el PDF de reglas de pedidos.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "documento",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        336
+      ],
+      "id": "0efd0c50-8f71-4362-af19-d5974f98e762",
+      "name": "Cargar reglas",
+      "webhookId": "713c9c82-3d3b-4451-a6eb-7bfd33322b41"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -176,
+        336
+      ],
+      "id": "23da925e-d1c0-4578-b34f-885498946dea",
+      "name": "Supabase Vector Store1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "txVK811nSOcO2lr4",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        528
+      ],
+      "id": "8d3594d8-35a5-42fa-a94a-ced0253fbb3b",
+      "name": "Embeddings Ollama1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "wvpPtoTsnZbGenVF",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "loader": "pdfLoader",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "tipo",
+                "value": "reglas"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -32,
+        544
+      ],
+      "id": "6a3d8c83-4fda-41c7-8e42-2da2fc2f24f1",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "chunkSize": 500,
+        "chunkOverlap": 50,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        704
+      ],
+      "id": "7ee3141a-80d5-4039-8913-00d3e4b45b79",
+      "name": "Recursive Character Text Splitter"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ingesta de datos": {
+      "main": [
+        [
+          {
+            "node": "Leer catalogo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer catalogo": {
+      "main": [
+        [
+          {
+            "node": "Armar Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Texto": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cargar reglas": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5a439f5a-0135-4af6-8ff3-c2913e07609b",
+  "meta": {},
+  "nodeGroups": [],
+  "id": "V3DWqi2beLvosKx1",
+  "tags": []
+}
